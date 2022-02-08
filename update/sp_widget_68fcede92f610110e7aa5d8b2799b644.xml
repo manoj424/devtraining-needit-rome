@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[function($scope, $rootScope, spUtil, $window, $uibModal) {
+
+	var c = this;
+	c.data.user = {value:'',displayValue:''};
+
+	//Triggered by the "Refresh" button
+	c.click = function(){
+		c.data.user.displayValue='';
+		c.data.user.value='';
+		c.data.short_description = '';
+	}
+
+	//Triggered by the "Submit" button
+	c.addItem = function(){
+		var user = c.data.user.value;
+		var desc = c.data.short_description;
+
+		//Give alert if both fields are not entered
+		if(user == '' || user == 'undefined' || user == 'null' || desc == 'null' || desc == '' || desc == 'undefined'){
+			alert('Please enter your name and a description of your issue before submitting.');
+			return;
+		}
+
+		//this calls the server script
+		c.server.update().then(function(response){
+
+			//popup modal
+			c.modalInstance = $uibModal.open({
+				templateUrl: 'modalTemplate',
+				scope: $scope
+			});
+
+			//Redirect user after submit
+			setTimeout(myFunction, 9000);
+			function myFunction(){
+				$window.location.href = 'https://dev58504.service-now.com/sp';//enter redirect URL
+			}
+		})
+	}
+}]]></client_script>
+        <controller_as>c</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>return_it_material</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>Return IT material</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+	if(!input)
+		return;
+
+	input.requested_by = gs.userID();
+
+	//Look how many tickets are ahead in the queue with whatever query you want
+	data.count = 0;//sets data object as integer
+	var gaIncCount = new GlideAggregate('incident');
+	gaIncCount.addQuery('active','true');
+	gaIncCount.addQuery('assignment_group','sys_id of the assignment group goes here');
+	gaIncCount.addQuery('contact_type','walk-in');
+	gaIncCount.addAggregate('COUNT');
+	gaIncCount.query();
+
+	var count = 0;
+
+	if(gaIncCount.next()){
+		count = gaIncCount.getAggregate('COUNT');
+		var one = 1;
+		var queueNumber = +count +one;
+		data.count = queueNumber;//passes value to HTML script
+	}
+
+	//Look up user's name for the popup
+	var userName = input.user.value;
+	data.name = '';//sets data object as string
+	var userGR = new GlideRecord('sys_user');
+	userGR.addQuery('sys_id',userName);
+	userGR.query();
+	var name = '';
+	if(userGR.next()){
+		name = userGR.first_name;
+		var firstName = name;
+		data.name = name.toString();//passes value to HTML script
+	}
+
+	//create new record and assign values to fields; you can set whatever fields on the INC you want
+	var newGr = new GlideRecord('incident');
+	newGr.initialize();
+	newGr.short_description = input.short_description;
+	newGr.caller_id = input.requested_by;
+	newGr.u_affected_user = input.user.value
+	newGr.assignment_group = 'your assignment group sys_id goes here';
+	newGr.contact_type = 'walk-in';
+	newGr.insert()
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-02-08 09:04:08</sys_created_on>
+        <sys_id>68fcede92f610110e7aa5d8b2799b644</sys_id>
+        <sys_mod_count>12</sys_mod_count>
+        <sys_name>Return IT material</sys_name>
+        <sys_package display_value="NeedIt" source="x_58872_needit">6ead8e780f603200cd674f8ce1050ed1</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="NeedIt">6ead8e780f603200cd674f8ce1050ed1</sys_scope>
+        <sys_update_name>sp_widget_68fcede92f610110e7aa5d8b2799b644</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-02-08 09:16:24</sys_updated_on>
+        <template><![CDATA[<div class="panel panel-default">
+  <div class="panel-heading">
+    <button class="btn btn-default m-b" ng-click="c.click()">
+      Refresh
+    </button>
+    <div>
+
+      <!-- User Reference field-->
+      <div class="form-group">
+        <label>Search for your name:</label>
+        <sn-record-picker field="data.user"
+                          table="'sys_user'"
+                          display-field="'name'"
+                          value-field="'sys_id'" search-fields="'user_name,name'"
+                          page-size="100">
+        </sn-record-picker>
+
+
+      </div>
+
+      <!--Description String field-->
+      <div class="form-group">
+        <label>Description</label>
+        <input class="form-control" ng-model="c.data.short_description">
+      </div>
+
+      <!--The Submit button-->
+      <div class="form-group">
+        <input class="btn btn-primary btn-block" ng-click="c.addItem()" type="submit" value="Enter your information above and click here to Submit">
+
+        <!--popup modal-->
+        <script>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h4 class="panel-title">Put whatever text you want here</h4>
+ 
+          <div class="panel-body wrapper-xl">
+            Thank you {{c.data.name}}, a ticket has been created on your behalf.<p>
+              <b><font size='4'>You are number {{c.data.count}} in the queue.</font size></b><p>
+                You will now be redirected to the Service Portal Home page.
+
+       
+        </script>
+        <!--end popup modal-->
+      </div>
+    </div>
+  </div>]]></template>
+    </sp_widget>
+</record_update>
